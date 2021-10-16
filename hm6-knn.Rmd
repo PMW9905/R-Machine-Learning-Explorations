@@ -1,0 +1,188 @@
+---
+title: "Homework 6"
+subtitle: "4375 Machine Learning with Dr. Mazidi"
+author: "Parker Whitehead"
+date: "10/2/2021"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+---
+
+# Problem 1: Comparison with Linear Regression
+
+### Step 1. Load Auto data and make train/test split
+
+Using the Auto data in package ISLR, set seed to 1234 and divide into 75% train, 25% test
+
+```{r}
+# your code here
+library(ISLR)
+data(Auto)
+set.seed(1234)
+
+i <- sample(1:nrow(Auto),nrow(Auto)*.75,replace=FALSE)
+train <- Auto[i,]
+test <- Auto[-i,]
+```
+
+### Step 2. Build  linear regression model
+
+Build a linear regression model on the train data, with mpg as the target, and cylinders, displacement, and horsepower as the predictors.  Output a summary of the model and plot the model to look at the residuals plots.
+
+```{r}
+lm1 <- lm(mpg~cylinders+displacement+horsepower, data=train)
+summary(lm1) 
+par(mfrow=c(2,2))
+plot(lm1)
+par(mfrow=c(1,1))
+```
+
+### Step 3. Evaluate on the test data
+
+Evaluate the model on the test data. Output correlation and mse.
+
+```{r}
+# your code here
+pred <- predict(lm1, newdata=test)
+correlation <- cor(pred,test$mpg)
+mse <- mean((pred-test$mpg)^2)
+print(paste("correlation: ",correlation))
+print(paste("mse: ",mse))
+```
+
+### Step 4. Try knn
+
+Use knnreg() in library caret to fit the training data. Use the default k=1. Output your correlation and mse.
+
+```{r}
+# your code here
+library(caret)
+fit <- knnreg(train[,2:4],train[,1],k=1)
+pred <- predict(fit, test[,2:4])
+correlation <- cor(pred,test$mpg)
+mse <- mean((pred-test$mpg)^2)
+print(paste("correlation: ",correlation))
+print(paste("mse: ",mse))
+```
+
+### Step 5. Analysis
+
+a.	Compare correlation metric that each algorithm achieved. Your commentary here:
+  Although both correlation metrics were within an acceptable range, the correlation for the knn model was better.
+
+b.	Compare the mse metric that each algorithm achieved. Your commentary here:
+  Similar to what we found in correlation, the mse is acceptable for both, but better for the knn model.
+
+c.	Why do you think that the mse metric was so different compared to the correlation metric?  Your commentary here:
+  In my case, the change in mse and correlation were not that different. Both equally improved by a moderate margin.
+
+d.	Why do you think that kNN outperformed linear regresssion on this data? In your 2-3 sentence explanation, discuss bias of the algorithms. Your commentary here:
+  This could be a result of the model being clumped together in groups rather than fit to an orderly line. Linear regression struggles with models that have data that is spread across the Y axis. This is not an issue with knn, as it does not create a line, and instead compares items to what they are near. This avoids the linear bias.
+
+
+# Problem 2: Comparison with Logistic Regression
+
+### Step 1.  Load Breast Cancer data, create regular and small factors, and divide into train/test
+
+Using the BreastCancer data in package mlbench, create factor columns Cell.small and Cell.regular as we did in the last homework. Set seed to 1234 and divide into 75% train, 25% test. 
+
+*Advice*: use different names for test/train so that when you run parts of  your script over and over the names don’t collide.
+
+```{r}
+library(mlbench)
+data(BreastCancer)
+BreastCancer$Cell.small <- FALSE
+BreastCancer$Cell.small <- ifelse(BreastCancer$Cell.size==1,1,0)
+BreastCancer$Cell.small <- factor(BreastCancer$Cell.small)
+
+BreastCancer$Cell.regular <- FALSE
+BreastCancer$Cell.regular <- ifelse(BreastCancer$Cell.shape==1,1,0)
+BreastCancer$Cell.regular <- factor(BreastCancer$Cell.regular)
+
+set.seed(1234)
+i <- sample(1:nrow(BreastCancer),nrow(BreastCancer)*.75, replace = FALSE)
+train2 <- BreastCancer[i,]
+test2 <- BreastCancer[-i,]
+```
+
+
+### Step 2. Build logistic regression model
+
+Build a logistic regression model with Class as the target and Cell.small and Cell.regular as the predictors. Output a summary of the model. 
+
+```{r}
+glm1 <-glm(Class~Cell.small+Cell.regular, data=train2, family=binomial)
+summary(glm1)
+```
+
+### Step 3. Evaluate on the test data
+
+Evaluate the model on the test data. Output accuracy and a table (or confusion matrix).
+
+```{r}
+probs2 <- predict(glm1,newdata=test2,type="response")
+pred2 <- ifelse(probs2>.5,"malignant","benign")
+acc <- mean(pred2==test2$Class)
+print(paste("accuracy: ",acc))
+table(pred2,test2$Class)
+
+```
+ 
+### Step 4. Try knn
+
+Use the knn() function in package class to use the same target and predictors as step 2. Output accuracy and a table of results for knn. 
+
+```{r}
+# your code here
+library(class)
+knn2 <- knn(train=train2[,12:13],test=test2[,12:13],cl=train2$Class)
+acc2 <- mean(knn2==test2$Class)
+print(paste("accuracy: ",acc2))
+table(knn2,test2$Class)
+```
+
+### Step 5. Try knn on original predictors
+
+Run kNN using predictor columns 2-6, 8-10, using default k=1.  Output accuracy and a table of results.
+
+Compare the results from step 5 above to a model which uses all the predictors. Provide some analysis on why you see these results:
+
+```{r}
+# your code here
+library(class)
+train_pred <- train2[,c(2:6,8:10)]
+test_pred <- test2[,c(2:6,8:10)]
+train_tar <- train2[,11]
+test_tar <- test2[,11]
+knn2 <- knn(train=train_pred,test=test_pred,cl=train_tar,k=1)
+acc2 <- mean(knn2==test_tar)
+print(paste("accuracy: ",acc2))
+table(knn2,test_tar)
+```
+
+### Step 6. Try logistic regression on original predictors
+
+Run logistic regression using predictor columns 2-6, 8-10.  Output accuracy and a table of results.
+
+Compare the results from the logistic regression and knn algorithms using all predictors except column 7 in the steps above. Provide some analysis on why you see these results:
+
+Incredibly similar results are seen between the two sets. This is most likely due to the fact that so many predictors are used, and that there are only 2 categories to be made. 
+
+
+```{r}
+glm2 <-glm(Class~Cl.thickness+Cell.size+Cell.shape+Marg.adhesion+Epith.c.size+Bl.cromatin+Normal.nucleoli+Mitoses, data=train2, family=binomial)
+probs3 <- predict(glm2,newdata=test2,type="response")
+pred3 <- ifelse(probs3>.5,"malignant","benign")
+acc <- mean(pred3==test2$Class)
+print(paste("accuracy: ",acc))
+table(pred3,test2$Class)
+```
+
+
+
+
+
+
+
+
